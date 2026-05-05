@@ -5,6 +5,8 @@ An open-source project by ShaulaTec
 **Version:** 0.2  
 **Date:** April 2026  
 
+## Frontend Repo https://github.com/YalukR/FowieInvent_fe.git
+
 ---
 
 ## 1. OVERVIEW
@@ -185,6 +187,12 @@ This modularity must be considered in database design and business logic, even i
 - **Minimum stock:** Threshold for alerts  
 
 ---
+
+## License
+
+This software is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+
+You are free to use, modify, and distribute this software under the terms of the license. Any modifications or derivative works must also be distributed under the same license.
 
 ## FowieInvent
 
