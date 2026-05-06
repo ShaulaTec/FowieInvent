@@ -1,7 +1,6 @@
 # apps/users/serializers.py
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth import authenticate
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
@@ -20,14 +19,14 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         email    = attrs.get('email')
         password = attrs.get('password')
 
-        user = authenticate(
-            request=self.context.get('request'),
-            email=email,
-            password=password,
-        )
-
-        if not user:
+        try:
+            user = Usuario.objects.get(email=email)
+        except Usuario.DoesNotExist:
             raise serializers.ValidationError('Correo o contraseña incorrectos.')
+
+        if not user.check_password(password):
+            raise serializers.ValidationError('Correo o contraseña incorrectos.')
+
         if not user.activo:
             raise serializers.ValidationError('Esta cuenta está desactivada.')
 
