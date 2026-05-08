@@ -1,6 +1,6 @@
 # apps/inventory/models.py
 import uuid
-from django.db import models
+from django.db import models, transaction
 from apps.tenants.models import Tenant
 from apps.users.models import Usuario
 
@@ -51,3 +51,15 @@ class Movimiento(models.Model):
 
     class Meta:
         db_table = 'movimiento'
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            producto = self.producto
+            if self.tipo == self.Tipo.ENTRADA:
+                producto.stock_actual += self.cantidad
+            elif self.tipo == self.Tipo.SALIDA:
+                if producto.stock_actual < self.cantidad:
+                    raise ValueError("No hay suficiente stock para realizar esta salida.")
+                producto.stock_actual -= self.cantidad
+            producto.save()
+            super().save(*args, **kwargs)
