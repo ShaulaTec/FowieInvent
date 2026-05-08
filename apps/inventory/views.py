@@ -1,5 +1,5 @@
 # apps/inventory/views.py
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, mixins, permissions
 from .models import Categoria, Producto, Movimiento
 from .serializers import CategoriaSerializer, ProductoSerializer, MovimientoSerializer
 
@@ -16,6 +16,7 @@ class CategoriaViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
 
+
 class ProductoViewSet(viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -29,7 +30,11 @@ class ProductoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
 
-class MovimientoViewSet(viewsets.ModelViewSet):
+
+class MovimientoViewSet(mixins.CreateModelMixin,
+                        mixins.ListModelMixin,
+                        mixins.RetrieveModelMixin,
+                        viewsets.GenericViewSet):
     serializer_class = MovimientoSerializer
     permission_classes = [permissions.IsAuthenticated]
 

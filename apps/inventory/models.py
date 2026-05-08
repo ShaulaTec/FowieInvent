@@ -3,6 +3,7 @@ import uuid
 from django.db import models, transaction
 from apps.tenants.models import Tenant
 from apps.users.models import Usuario
+from django.core.exceptions import ValidationError
 
 class Categoria(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -59,7 +60,7 @@ class Movimiento(models.Model):
                 producto.stock_actual += self.cantidad
             elif self.tipo == self.Tipo.SALIDA:
                 if producto.stock_actual < self.cantidad:
-                    raise ValueError("No hay suficiente stock para realizar esta salida.")
+                    raise ValidationError("No hay suficiente stock para realizar esta salida.")
                 producto.stock_actual -= self.cantidad
             producto.save()
             super().save(*args, **kwargs)
