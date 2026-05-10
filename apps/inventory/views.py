@@ -9,8 +9,7 @@ class CategoriaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Categoria.objects.filter(
-            tenant=self.request.user.tenant,
-            activo=True
+            tenant=self.request.user.tenant
         )
 
     def perform_create(self, serializer):
@@ -22,8 +21,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Producto.objects.filter(
-            tenant=self.request.user.tenant,
-            activo=True
+            tenant=self.request.user.tenant
         )
 
     def perform_create(self, serializer):
