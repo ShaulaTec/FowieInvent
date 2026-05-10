@@ -40,7 +40,13 @@ class MovimientoViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Movimiento.objects.filter(producto__tenant=self.request.user.tenant)
+        qs = Movimiento.objects.filter(
+            producto__tenant=self.request.user.tenant
+        )
+        producto_id = self.request.query_params.get('producto')
+        if producto_id:
+            qs = qs.filter(producto__id=producto_id)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user)
