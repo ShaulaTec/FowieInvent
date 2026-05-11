@@ -1,8 +1,9 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, mixins, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
+
 from .models import Categoria, Producto, Movimiento
 from .serializers import CategoriaSerializer, ProductoSerializer, MovimientoSerializer
 
@@ -28,7 +29,6 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         categoria = self.get_object()
         categoria.activo = True
         categoria.save()
-
         productos_inactivos = categoria.productos.filter(activo=False)
         return Response({
             'categoria': CategoriaSerializer(categoria).data,
@@ -66,7 +66,10 @@ class ProductoViewSet(viewsets.ModelViewSet):
         return Response({'activados': activados})
 
 
-class MovimientoViewSet(viewsets.ModelViewSet):
+class MovimientoViewSet(mixins.CreateModelMixin,
+                        mixins.ListModelMixin,
+                        mixins.RetrieveModelMixin,
+                        viewsets.GenericViewSet):
     serializer_class = MovimientoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
