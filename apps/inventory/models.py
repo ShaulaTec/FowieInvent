@@ -5,6 +5,17 @@ from apps.tenants.models import Tenant
 from apps.users.models import Usuario
 from django.core.exceptions import ValidationError
 
+
+def _ruta_imagen_producto(instance, filename):
+    """
+    Namespacea las imagenes por tenant para mantener limpio el bucket:
+        productos/<tenant_id>/<uuid>_<filename>
+    """
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin'
+    nombre = f'{uuid.uuid4().hex}.{ext}'
+    tenant_id = getattr(instance, 'tenant_id', None) or 'sin_tenant'
+    return f'productos/{tenant_id}/{nombre}'
+
 class Categoria(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='categorias')
@@ -27,6 +38,12 @@ class Producto(models.Model):
     unidad_medida = models.CharField(max_length=50)
     stock_actual = models.IntegerField(default=0)
     stock_minimo = models.IntegerField(default=0)
+    imagen = models.ImageField(
+        upload_to=_ruta_imagen_producto,
+        null=True,
+        blank=True,
+        help_text='Imagen del producto (opcional).',
+    )
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
