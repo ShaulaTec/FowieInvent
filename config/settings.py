@@ -151,6 +151,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (subidas de usuario — imagenes de productos, etc.)
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Limites razonables para uploads (10 MB por archivo).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
