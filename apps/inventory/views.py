@@ -65,6 +65,20 @@ class ProductoViewSet(viewsets.ModelViewSet):
         ).update(activo=True)
         return Response({'activados': activados})
 
+    @action(detail=True, methods=['post'], url_path='reactivar')
+    def reactivar(self, request, pk=None):
+        producto = self.get_object()
+
+        if not producto.categoria.activo:
+            return Response(
+                {'error': 'La categoría de este producto está inactiva. Ve al dashboard de categorías para activarla primero.'},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        producto.activo = True
+        producto.save()
+        return Response(ProductoSerializer(producto).data)
+
 
 class MovimientoViewSet(mixins.CreateModelMixin,
                         mixins.ListModelMixin,
