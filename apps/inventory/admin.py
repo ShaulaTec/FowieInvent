@@ -14,6 +14,8 @@ class ProductoAdmin(admin.ModelAdmin):
     list_filter = ('activo', 'tenant', 'categoria')
     search_fields = ('nombre',)
 
+    
+
 @admin.register(Movimiento)
 class MovimientoAdmin(admin.ModelAdmin):
     list_display = ('producto', 'usuario', 'tipo', 'cantidad', 'fecha')
