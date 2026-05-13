@@ -6,7 +6,7 @@ from .serializers import PlanSerializer, ModuloSerializer, TenantSerializer, Ten
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Plan.objects.filter(activo=True)
     serializer_class = PlanSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 class ModuloViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Modulo.objects.filter(activo=True)
