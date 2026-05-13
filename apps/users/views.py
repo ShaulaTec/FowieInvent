@@ -3,6 +3,8 @@ from rest_framework import viewsets, permissions, generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from apps.roles.permissions import PermisoRequeridoMixin
+from apps.roles.permisos import GESTIONAR_USUARIOS
 from .models import Usuario
 from .serializers import UsuarioSerializer, RegisterSerializer, EmailTokenObtainPairSerializer
 
@@ -11,9 +13,17 @@ class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
 
 
-class UsuarioViewSet(viewsets.ModelViewSet):
+class UsuarioViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
     serializer_class   = UsuarioSerializer
     permission_classes = [permissions.IsAuthenticated]
+    permiso_requerido_map = {
+        'list':           GESTIONAR_USUARIOS,
+        'retrieve':       GESTIONAR_USUARIOS,
+        'create':         GESTIONAR_USUARIOS,
+        'update':         GESTIONAR_USUARIOS,
+        'partial_update': GESTIONAR_USUARIOS,
+        'destroy':        GESTIONAR_USUARIOS,
+    }
 
     def get_queryset(self):
         return Usuario.objects.filter(

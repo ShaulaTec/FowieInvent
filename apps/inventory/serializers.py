@@ -18,7 +18,13 @@ class ProductoSerializer(serializers.ModelSerializer):
         read_only_fields = ('tenant', 'created_at')
 
 class MovimientoSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+    usuario_nombre  = serializers.SerializerMethodField()
+
     class Meta:
         model = Movimiento
         fields = '__all__'
         read_only_fields = ('usuario', 'fecha')
+
+    def get_usuario_nombre(self, obj):
+        return obj.usuario.get_username() or obj.usuario.email

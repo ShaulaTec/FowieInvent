@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-&t-g*5h#_^4*c+2-yi85_t-y+fm&e%-4+9dj1$_@--1$4^m*8*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -90,7 +90,12 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
+	'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
 }
+
+AUTH_USER_MODEL = 'users.Usuario'
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -146,8 +151,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (subidas de usuario — imagenes de productos, etc.)
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Limites razonables para uploads (10 MB por archivo).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:4200',
-]
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
