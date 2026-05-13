@@ -2,9 +2,9 @@
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
-from apps.tenants.models import Tenant
+from apps.tenants.models import Tenant, Plan
 from apps.roles.models import Rol
-
+from django.core.exceptions import ValidationError
 class UsuarioManager(BaseUserManager):
     def create_user(self, email, tenant, rol, password=None):
         if not email:
@@ -33,3 +33,14 @@ class Usuario(AbstractBaseUser):
 
     def __str__(self):
         return self.email
+    
+    def save(self, *args, **kwargs):
+        plan = self.tenant.plan # Obtener el plan del tenant
+        usuarios_count = self.tenant.usuarios.count() # Contar los usuarios existentes para el tenant
+        max_usuarios = plan.max_usuarios # Obtener el límite de usuarios del plan
+
+        if usuarios_count >= max_usuarios:
+            # AQUI ES DONDE SE MUESTRA EL ERROR EN NAVEGADOR, HAY QUE MOSTRARLO EN EL FRONTEND
+            raise ValidationError("El plan actual no permite agregar más usuarios.")
+        
+        super().save(*args, **kwargs) # Guardar el usuario si no se ha alcanzado el límite
