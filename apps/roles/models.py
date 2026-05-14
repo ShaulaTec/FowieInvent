@@ -7,6 +7,9 @@ class Permiso(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     codigo = models.CharField(max_length=100, unique=True)
     modulo = models.CharField(max_length=50)
+    submodulo = models.CharField(max_length=50, default='', blank=True)
+    ruta      = models.CharField(max_length=100, default='', blank=True)
+    icono     = models.CharField(max_length=30, default='', blank=True)
     descripcion = models.CharField(max_length=200)
 
     class Meta:

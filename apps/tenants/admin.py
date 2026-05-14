@@ -2,6 +2,10 @@
 from django.contrib import admin
 from .models import Plan, Modulo, Tenant, TenantModulo
 
+class TenantModuloInline(admin.TabularInline):
+    model = TenantModulo
+    extra = 1
+
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'max_usuarios', 'max_productos', 'max_categorias', 'precio_mensual', 'activo')
@@ -19,6 +23,8 @@ class TenantAdmin(admin.ModelAdmin):
     list_display = ('nombre_negocio', 'email_contacto', 'plan', 'estado', 'fecha_registro', 'fecha_vencimiento')
     list_filter = ('estado', 'plan')
     search_fields = ('nombre_negocio', 'email_contacto')
+    readonly_fields = ('fecha_registro',)
+    inlines = [TenantModuloInline]  # ver/editar módulos del tenant inline
 
 @admin.register(TenantModulo)
 class TenantModuloAdmin(admin.ModelAdmin):

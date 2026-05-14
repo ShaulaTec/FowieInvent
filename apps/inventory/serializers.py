@@ -1,6 +1,6 @@
-# apps/inventory/serializers.py
 from rest_framework import serializers
 from .models import Categoria, Producto, Movimiento
+
 
 class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -8,14 +8,40 @@ class CategoriaSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('tenant',)
 
+    def validate(self, attrs):
+        request = self.context.get('request')
+        tenant = request.user.tenant
+        plan = tenant.plan
+
+        if not self.instance:  # Solo en creación
+            if tenant.categorias.count() >= plan.max_categorias:
+                raise serializers.ValidationError(
+                    {"detail": f"Tu plan solo permite {plan.max_categorias} categorías."}
+                )
+        return attrs
+
+
 class ProductoSerializer(serializers.ModelSerializer):
-    categoria = CategoriaSerializer(read_only=True)
+    categoria    = CategoriaSerializer(read_only=True)
     categoria_id = serializers.UUIDField(write_only=True)
 
     class Meta:
         model = Producto
         fields = '__all__'
         read_only_fields = ('tenant', 'created_at')
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        tenant = request.user.tenant
+        plan = tenant.plan
+
+        if not self.instance:  # Solo en creación
+            if tenant.productos.count() >= plan.max_productos:
+                raise serializers.ValidationError(
+                    {"detail": f"Tu plan solo permite {plan.max_productos} productos."}
+                )
+        return attrs
+
 
 class MovimientoSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)

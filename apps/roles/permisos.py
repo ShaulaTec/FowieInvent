@@ -27,15 +27,16 @@ GESTIONAR_ROLES    = 'gestionar_roles'
 
 # Estructura usada por la migracion de seed y por el endpoint que lista
 # permisos disponibles por modulo.
+
 PERMISOS_SISTEMA = [
-    # (codigo, modulo, descripcion)
-    (VER_INVENTARIO,       'inventory', 'Ver productos, categorias y stock del inventario.'),
-    (EDITAR_PRODUCTO,      'inventory', 'Crear y modificar productos del inventario.'),
-    (ELIMINAR_PRODUCTO,    'inventory', 'Eliminar (logicamente) productos del inventario.'),
-    (REGISTRAR_MOVIMIENTO, 'inventory', 'Registrar entradas y salidas de stock.'),
-    (VER_HISTORIAL,        'inventory', 'Consultar el historial de movimientos.'),
-    (GENERAR_REPORTE,      'inventory', 'Generar y exportar reportes de inventario.'),
-    (GESTIONAR_CATEGORIAS, 'inventory', 'Crear, editar y eliminar categorias.'),
-    (GESTIONAR_USUARIOS,   'tenants',   'Crear, editar y desactivar usuarios del tenant.'),
-    (GESTIONAR_ROLES,      'tenants',   'Crear roles y asignar permisos a los roles.'),
+    # (codigo, modulo, submodulo, ruta, icono, descripcion)
+    (VER_INVENTARIO,       'inventory', 'dashboard',   '/system/inventory/dashboard',   'pi pi-home',                    'Ver productos, categorias y stock del inventario.'),
+    (EDITAR_PRODUCTO,      'inventory', 'products',    '/system/inventory/products',    'pi pi-box',                     'Crear y modificar productos del inventario.'),
+    (ELIMINAR_PRODUCTO,    'inventory', 'products',    '/system/inventory/products',    'pi pi-box',                     'Eliminar (logicamente) productos del inventario.'),
+    (REGISTRAR_MOVIMIENTO, 'inventory', 'products',    '/system/inventory/products',    'pi pi-box',                     'Registrar entradas y salidas de stock.'),
+    (VER_HISTORIAL,        'inventory', 'products',    '/system/inventory/products',    'pi pi-box',                     'Consultar el historial de movimientos.'),
+    (GENERAR_REPORTE,      'inventory', 'dashboard',   '/system/inventory/dashboard',   'pi pi-home',                    'Generar y exportar reportes de inventario.'),
+    (GESTIONAR_CATEGORIAS, 'inventory', 'categories',  '/system/inventory/categories',  'pi pi-tag',                     'Crear, editar y eliminar categorias.'),
+    (GESTIONAR_USUARIOS,   'tenants',   'usuarios',    '/system/users',                 'pi pi-users',                   'Crear, editar y desactivar usuarios del tenant.'),
+    (GESTIONAR_ROLES,      'tenants',   'roles',       '/system/roles',                 'pi pi-shield',                  'Crear roles y asignar permisos a los roles.'),
 ]

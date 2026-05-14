@@ -7,6 +7,9 @@ from apps.roles.permissions import PermisoRequeridoMixin
 from apps.roles.permisos import GESTIONAR_USUARIOS
 from .models import Usuario
 from .serializers import UsuarioSerializer, RegisterSerializer, EmailTokenObtainPairSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from apps.roles.permisos import PERMISOS_SISTEMA
 
 
 class EmailTokenObtainPairView(TokenObtainPairView):
@@ -55,3 +58,25 @@ class RegisterView(generics.CreateAPIView):
                 'rol':    user.rol.nombre,
             }
         }, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me(request):
+    user = request.user
+    rol = user.rol
+    if rol.nombre == 'Owner':
+        permisos = [
+            {'codigo': p[0], 'modulo': p[1], 'submodulo': p[2], 'ruta': p[3], 'icono': p[4]}
+            for p in PERMISOS_SISTEMA
+        ]
+    else:
+        permisos = list(
+            rol.permisos.values('codigo', 'modulo', 'submodulo', 'ruta', 'icono')
+        )
+    return Response({
+        'id':       str(user.id),
+        'email':    user.email,
+        'tenant':   str(user.tenant.id),
+        'rol':      rol.nombre,
+        'permisos': permisos,
+    })
