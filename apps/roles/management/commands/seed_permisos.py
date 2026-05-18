@@ -22,9 +22,8 @@ class Command(BaseCommand):
             )
             if created:
                 creados += 1
-                self.stdout.write(f'  ✓ creado: {codigo}')
+                self.stdout.write(f'   creado: {codigo}')
             else:
-                # Actualiza campos si ya existía sin ellos
                 updated = False
                 for campo, valor in [('submodulo', submodulo), ('ruta', ruta), ('icono', icono)]:
                     if not getattr(obj, campo):
@@ -33,7 +32,7 @@ class Command(BaseCommand):
                 if updated:
                     obj.save()
                     actualizados += 1
-                    self.stdout.write(f'  ↻ actualizado: {codigo}')
+                    self.stdout.write(f'   actualizado: {codigo}')
 
         self.stdout.write(
             self.style.SUCCESS(
