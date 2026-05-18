@@ -20,7 +20,7 @@ class PermisoViewSet(viewsets.ReadOnlyModelViewSet):
         modulos_activos = self.request.user.tenant.modulos.filter(
             activo=True
         ).values_list('modulo__codigo', flat=True)
-        return Permiso.objects.filter(modulo__in=modulos_activos)
+        return Permiso.objects.filter(modulo__codigo__in=modulos_activos).select_related('modulo')
 
 
 class RolViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):

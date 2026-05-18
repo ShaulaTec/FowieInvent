@@ -4,20 +4,15 @@ from django.db import models
 from apps.tenants.models import Tenant
 
 class Permiso(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    codigo = models.CharField(max_length=100, unique=True)
-    modulo = models.CharField(max_length=50)
+    id        = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    modulo    = models.ForeignKey('tenants.Modulo', on_delete=models.PROTECT, related_name='permisos', null=True)
+    codigo    = models.CharField(max_length=100, unique=True)
     submodulo = models.CharField(max_length=50, default='', blank=True)
     ruta      = models.CharField(max_length=100, default='', blank=True)
-    icono     = models.CharField(max_length=30, default='', blank=True)
+    icono     = models.CharField(max_length=50, default='', blank=True)
     descripcion = models.CharField(max_length=200)
-
     class Meta:
         db_table = 'permiso'
-
-    def __str__(self):
-        return self.codigo
-
 
 class Rol(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

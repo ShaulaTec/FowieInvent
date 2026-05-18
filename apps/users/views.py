@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.roles.permissions import PermisoRequeridoMixin
 from apps.roles.permisos import GESTIONAR_USUARIOS
 from .models import Usuario
+from apps.roles.models import Permiso
 from .serializers import UsuarioSerializer, RegisterSerializer, EmailTokenObtainPairSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -63,16 +64,29 @@ class RegisterView(generics.CreateAPIView):
 @permission_classes([IsAuthenticated])
 def me(request):
     user = request.user
-    rol = user.rol
+    rol  = user.rol
+
     if rol.nombre == 'Owner':
-        permisos = [
-            {'codigo': p[0], 'modulo': p[1], 'submodulo': p[2], 'ruta': p[3], 'icono': p[4]}
-            for p in PERMISOS_SISTEMA
-        ]
+        permisos_qs = Permiso.objects.select_related('modulo').all()
     else:
-        permisos = list(
-            rol.permisos.values('codigo', 'modulo', 'submodulo', 'ruta', 'icono')
-        )
+        permisos_qs = rol.permisos.select_related('modulo').all()
+
+    permisos = [
+        {
+            'codigo':    p.codigo,
+            'submodulo': p.submodulo,
+            'ruta':      p.ruta,
+            'icono':     p.icono,
+            'modulo': {
+                'codigo': p.modulo.codigo,
+                'label':  p.modulo.label,
+                'icono':  p.modulo.icono,
+                'ruta':   p.modulo.ruta,
+            } if p.modulo else None,
+        }
+        for p in permisos_qs
+    ]
+
     return Response({
         'id':       str(user.id),
         'email':    user.email,
