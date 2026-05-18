@@ -37,7 +37,7 @@ PERMISOS_SISTEMA = [
     # (codigo, modulo, submodulo, ruta, icono, descripcion)
 
     # ── Inventario ──────────────────────────────────────────────────────────
-    (VER_INVENTARIO,       'inventory', 'inventory',   '/system/inventory/dashboard',   'pi pi-home',                    'Ver productos, categorias y stock del inventario.'),
+    (VER_INVENTARIO,       'inventory', 'inventory',   '/system/inventory/dashboard',   'pi pi-list',                    'Ver productos, categorias y stock del inventario.'),
     (EDITAR_PRODUCTO,      'inventory', 'products',    '/system/inventory/products',    'pi pi-box',                     'Crear y modificar productos del inventario.'),
     (ELIMINAR_PRODUCTO,    'inventory', 'products',    '/system/inventory/products',    'pi pi-box',                     'Eliminar (logicamente) productos del inventario.'),
     (REGISTRAR_MOVIMIENTO, 'inventory', 'products',    '/system/inventory/products',    'pi pi-box',                     'Registrar entradas y salidas de stock.'),
