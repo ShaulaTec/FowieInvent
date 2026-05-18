@@ -19,7 +19,7 @@ class Command(BaseCommand):
             )
             if created:
                 creados += 1
-                self.stdout.write(f'  ✓ {data["nombre"]}')
+                self.stdout.write(f'   {data["nombre"]}')
 
         self.stdout.write(
             self.style.SUCCESS(f'\n{creados} planes creados.')
