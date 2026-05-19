@@ -115,6 +115,13 @@ class RegisterSerializer(serializers.Serializer):
             rol=rol_owner,
         )
         user.set_password(validated_data['password'])
-        user.save()  # ✓ Sin validación de límite: el Owner es el primer usuario, siempre permitido
+        user.save()
 
+        # ── Asignar módulos activos al tenant recién creado ───────────────
+        from apps.tenants.models import Modulo, TenantModulo
+        modulos = Modulo.objects.filter(activo=True)
+        TenantModulo.objects.bulk_create([
+            TenantModulo(tenant=tenant, modulo=modulo)
+            for modulo in modulos
+        ])
         return user
