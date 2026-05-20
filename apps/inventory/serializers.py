@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Categoria, Producto, Movimiento
+from apps.notifications.models import Notificacion
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
@@ -41,6 +42,12 @@ class ProductoSerializer(serializers.ModelSerializer):
                     {"detail": f"Tu plan solo permite {plan.max_productos} productos."}
                 )
         return attrs
+    
+    def create(self, validated_data):
+        request = self.context.get('request')
+        validated_data['tenant'] = request.user.tenant
+        return super().create(validated_data)
+
 
 
 class MovimientoSerializer(serializers.ModelSerializer):
@@ -54,3 +61,9 @@ class MovimientoSerializer(serializers.ModelSerializer):
 
     def get_usuario_nombre(self, obj):
         return obj.usuario.get_username() or obj.usuario.email
+    
+    def create(self, validated_data):
+        request = self.context.get('request')
+        validated_data['usuario'] = request.user 
+    
+        return super().create(validated_data)
