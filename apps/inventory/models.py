@@ -30,14 +30,14 @@ class Categoria(models.Model):
         return self.nombre
 
     def save(self, *args, **kwargs):
-        plan = self.tenant.plan # Obtener el plan del tenant
-        categorias_count = self.tenant.categorias.count() # Contar las categorías existentes para el tenant
-        max_categorias = plan.max_categorias # Obtener el límite de categorías del plan
+        if not self.pk:  # Solo en creación
+            plan = self.tenant.plan
+            categorias_count = self.tenant.categorias.count()
+            max_categorias = plan.max_categorias
+            if categorias_count >= max_categorias:
+                raise ValidationError("El plan actual no permite agregar más categorías.")
+        super().save(*args, **kwargs)
 
-        if categorias_count >= max_categorias:
-            # AQUI ES DONDE SE MUESTRA EL ERROR EN NAVEGADOR, HAY QUE MOSTRARLO EN EL FRONTEND
-            raise ValidationError("El plan actual no permite agregar más categorías.")
-        super().save(*args, **kwargs) # Guardar la categoría si no se ha alcanzado el límite
 
 class Producto(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -63,16 +63,13 @@ class Producto(models.Model):
         return self.nombre
     
     def save(self, *args, **kwargs):
-        
-        plan = self.tenant.plan # Obtener el plan del tenant
-        productos_count = self.tenant.productos.count() # Contar los productos existentes para el tenant
-        max_productos = plan.max_productos # Obtener el límite de productos del plan
-
-        if productos_count >= max_productos:
-            # AQUI ES DONDE SE MUESTRA EL ERROR EN NAVEGADOR, HAY QUE MOSTRARLO EN EL FRONTEND
-            raise ValidationError("El plan actual no permite agregar más productos.")
-        
-        super().save(*args, **kwargs) # Guardar el producto si no se ha alcanzado el límite
+        if not self.pk:  # Solo en creación
+            plan = self.tenant.plan
+            productos_count = self.tenant.productos.count()
+            max_productos = plan.max_productos
+            if productos_count >= max_productos:
+                raise ValidationError("El plan actual no permite agregar más productos.")
+        super().save(*args, **kwargs)
 
 
 
@@ -101,5 +98,6 @@ class Movimiento(models.Model):
                 if producto.stock_actual < self.cantidad:
                     raise ValidationError("No hay suficiente stock para realizar esta salida.")
                 producto.stock_actual -= self.cantidad
-            producto.save()
+            
+            producto.save(update_fields=['stock_actual'])  # Solo guarda el campo que cambió
             super().save(*args, **kwargs)
