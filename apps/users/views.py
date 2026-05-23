@@ -3,17 +3,31 @@ from rest_framework import viewsets, permissions, generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from apps.roles.permissions import PermisoRequeridoMixin
+from apps.roles.permisos import GESTIONAR_USUARIOS
 from .models import Usuario
+from apps.roles.models import Permiso
 from .serializers import UsuarioSerializer, RegisterSerializer, EmailTokenObtainPairSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from apps.roles.permisos import PERMISOS_SISTEMA
 
 
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
 
 
-class UsuarioViewSet(viewsets.ModelViewSet):
+class UsuarioViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
     serializer_class   = UsuarioSerializer
     permission_classes = [permissions.IsAuthenticated]
+    permiso_requerido_map = {
+        'list':           GESTIONAR_USUARIOS,
+        'retrieve':       GESTIONAR_USUARIOS,
+        'create':         GESTIONAR_USUARIOS,
+        'update':         GESTIONAR_USUARIOS,
+        'partial_update': GESTIONAR_USUARIOS,
+        'destroy':        GESTIONAR_USUARIOS,
+    }
 
     def get_queryset(self):
         return Usuario.objects.filter(
@@ -45,3 +59,38 @@ class RegisterView(generics.CreateAPIView):
                 'rol':    user.rol.nombre,
             }
         }, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me(request):
+    user = request.user
+    rol  = user.rol
+
+    if rol.nombre == 'Owner':
+        permisos_qs = Permiso.objects.select_related('modulo').all()
+    else:
+        permisos_qs = rol.permisos.select_related('modulo').all()
+
+    permisos = [
+        {
+            'codigo':    p.codigo,
+            'submodulo': p.submodulo,
+            'ruta':      p.ruta,
+            'icono':     p.icono,
+            'modulo': {
+                'codigo': p.modulo.codigo,
+                'label':  p.modulo.label,
+                'icono':  p.modulo.icono,
+                'ruta':   p.modulo.ruta,
+            } if p.modulo else None,
+        }
+        for p in permisos_qs
+    ]
+
+    return Response({
+        'id':       str(user.id),
+        'email':    user.email,
+        'tenant':   str(user.tenant.id),
+        'rol':      rol.nombre,
+        'permisos': permisos,
+    })

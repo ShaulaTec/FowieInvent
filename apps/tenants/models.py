@@ -19,18 +19,17 @@ class Plan(models.Model):
 
 
 class Modulo(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    codigo = models.CharField(max_length=50, unique=True)
-    nombre = models.CharField(max_length=100)
+    id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    codigo      = models.CharField(max_length=50, unique=True)
+    nombre      = models.CharField(max_length=100)
+    label       = models.CharField(max_length=100, default='', blank=True)
     descripcion = models.TextField(blank=True)
+    icono       = models.CharField(max_length=50, default='', blank=True)
+    ruta        = models.CharField(max_length=100, default='', blank=True)
     precio_mensual = models.DecimalField(max_digits=10, decimal_places=2)
-    activo = models.BooleanField(default=True)
-
+    activo      = models.BooleanField(default=True)
     class Meta:
         db_table = 'modulo'
-
-    def __str__(self):
-        return self.nombre
 
 
 class Tenant(models.Model):

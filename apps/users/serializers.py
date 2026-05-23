@@ -1,4 +1,3 @@
-# apps/users/serializers.py
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db import transaction
@@ -9,8 +8,6 @@ from apps.roles.models import Rol
 from apps.roles.serializers import RolSerializer
 from apps.tenants.models import Tenant, Plan
 
-
-# ── Login: acepta email en lugar de username ──────────────────────────────────
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = 'email'
@@ -43,8 +40,6 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         }
 
 
-# ── Usuarios dentro de un tenant ──────────────────────────────────────────────
-
 class UsuarioSerializer(serializers.ModelSerializer):
     rol      = RolSerializer(read_only=True)
     rol_id   = serializers.UUIDField(write_only=True)
@@ -55,6 +50,18 @@ class UsuarioSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'rol', 'rol_id', 'activo', 'ultimo_acceso', 'password')
         read_only_fields = ('tenant',)
 
+    def validate(self, attrs):
+        request = self.context.get('request')
+        tenant = request.user.tenant
+        plan = tenant.plan
+
+        if not self.instance:  # Solo en creación
+            if tenant.usuarios.count() >= plan.max_usuarios:
+                raise serializers.ValidationError(
+                    {"detail": f"Tu plan solo permite {plan.max_usuarios} usuarios."}
+                )
+        return attrs
+
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = Usuario(**validated_data)
@@ -62,8 +69,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-
-# ── Register: Tenant + Rol Owner + Usuario en una transacción ────────────────
 
 class RegisterSerializer(serializers.Serializer):
     nombre         = serializers.CharField(max_length=150)
@@ -80,7 +85,6 @@ class RegisterSerializer(serializers.Serializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        # 1. Resuelve plan
         plan_id = validated_data.get('plan_id')
         if plan_id:
             try:
@@ -92,7 +96,6 @@ class RegisterSerializer(serializers.Serializer):
             if not plan:
                 raise serializers.ValidationError('No hay planes disponibles.')
 
-        # 2. Crea el Tenant
         tenant = Tenant.objects.create(
             nombre_negocio=validated_data['nombre_negocio'],
             email_contacto=validated_data['email'],
@@ -100,14 +103,12 @@ class RegisterSerializer(serializers.Serializer):
             fecha_vencimiento=timezone.now().date() + timedelta(days=30),
         )
 
-        # 3. Crea el rol "Owner" para este tenant
         rol_owner = Rol.objects.create(
             tenant=tenant,
             nombre='Owner',
             descripcion='Propietario del negocio — acceso total.',
         )
 
-        # 4. Crea el Usuario owner
         user = Usuario(
             email=validated_data['email'],
             tenant=tenant,
@@ -116,4 +117,11 @@ class RegisterSerializer(serializers.Serializer):
         user.set_password(validated_data['password'])
         user.save()
 
+        # ── Asignar módulos activos al tenant recién creado ───────────────
+        from apps.tenants.models import Modulo, TenantModulo
+        modulos = Modulo.objects.filter(activo=True)
+        TenantModulo.objects.bulk_create([
+            TenantModulo(tenant=tenant, modulo=modulo)
+            for modulo in modulos
+        ])
         return user
