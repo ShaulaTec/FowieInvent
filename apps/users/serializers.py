@@ -118,8 +118,13 @@ class RegisterSerializer(serializers.Serializer):
         user.save()
 
         # ── Asignar módulos activos al tenant recién creado ───────────────
+
         from apps.tenants.models import Modulo, TenantModulo
-        modulos = Modulo.objects.filter(activo=True)
+
+        # Plan básico (1 usuario) no incluye el módulo de roles y usuarios
+        excluidos = {'rbac'} if plan.max_usuarios == 1 else set()
+        modulos = Modulo.objects.filter(activo=True).exclude(codigo__in=excluidos)
+
         TenantModulo.objects.bulk_create([
             TenantModulo(tenant=tenant, modulo=modulo)
             for modulo in modulos
