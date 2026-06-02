@@ -38,29 +38,31 @@ class UsuarioViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
 
-    def update(self, request, *args, **kwargs):
-        usuario_target = self.get_object()
-        rol_id_nuevo   = request.data.get('rol_id')
+def update(self, request, *args, **kwargs):
+    usuario_target = self.get_object()
+    rol_id_nuevo   = request.data.get('rol_id')
 
-        if (usuario_target == request.user
-                and request.user.rol.nombre == 'Owner'
-                and rol_id_nuevo is not None
-                and str(request.user.rol.id) != str(rol_id_nuevo)):
-            raise PermissionDenied(
-                'Un Owner no puede cambiar su propio rol. '
-                'Pide a otro Owner que lo haga.'
-            )
+    if (usuario_target == request.user
+            and request.user.rol is not None
+            and request.user.rol.nombre == 'Owner'
+            and rol_id_nuevo is not None
+            and str(request.user.rol.id) != str(rol_id_nuevo)):
+        raise PermissionDenied(
+            'Un Owner no puede cambiar su propio rol. '
+            'Pide a otro Owner que lo haga.'
+        )
 
-        if (usuario_target != request.user
-                and usuario_target.rol.nombre == 'Owner'
-                and rol_id_nuevo is not None
-                and str(usuario_target.rol.id) != str(rol_id_nuevo)
-                and request.user.rol.nombre != 'Owner'):
-            raise PermissionDenied(
-                'Solo un Owner puede cambiar el rol de otro Owner.'
-            )
+    if (usuario_target != request.user
+            and usuario_target.rol is not None
+            and usuario_target.rol.nombre == 'Owner'
+            and rol_id_nuevo is not None
+            and str(usuario_target.rol.id) != str(rol_id_nuevo)
+            and request.user.rol.nombre != 'Owner'):
+        raise PermissionDenied(
+            'Solo un Owner puede cambiar el rol de otro Owner.'
+        )
 
-        return super().update(request, *args, **kwargs)
+    return super().update(request, *args, **kwargs)
 
 class RegisterView(generics.CreateAPIView):
     serializer_class   = RegisterSerializer
