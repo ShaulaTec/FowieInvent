@@ -1,3 +1,4 @@
+from django.db import transaction  # ← agregar este import
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import api_view, permission_classes as drf_permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -12,11 +13,7 @@ from apps.users.models import Usuario
 
 
 def _verificar_modulo_rbac(user):
-    """Lanza 403 si el tenant del usuario no tiene el módulo rbac activo."""
-    tiene = user.tenant.modulos.filter(
-        modulo__codigo='rbac',
-        activo=True,
-    ).exists()
+    tiene = user.tenant.modulos.filter(modulo__codigo='rbac', activo=True).exists()
     if not tiene:
         raise PermissionDenied('Tu plan no incluye el módulo de usuarios y roles.')
 
@@ -50,10 +47,7 @@ class RolViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         _verificar_modulo_rbac(self.request.user)
-        return Rol.objects.filter(
-            tenant=self.request.user.tenant,
-            activo=True,
-        )
+        return Rol.objects.filter(tenant=self.request.user.tenant, activo=True)
 
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
@@ -68,7 +62,13 @@ class RolViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
         rol = self.get_object()
         if rol.nombre == 'Owner':
             raise PermissionDenied('El rol Owner no puede eliminarse.')
-        return super().destroy(request, *args, **kwargs)
+
+        with transaction.atomic():
+            rol.usuarios.filter(activo=True).update(rol=None)
+            rol.activo = False
+            rol.save(update_fields=['activo'])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class RolPermisoViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
@@ -85,9 +85,7 @@ class RolPermisoViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         _verificar_modulo_rbac(self.request.user)
-        return RolPermiso.objects.filter(
-            rol__tenant=self.request.user.tenant
-        )
+        return RolPermiso.objects.filter(rol__tenant=self.request.user.tenant)
 
     def _es_owner(self):
         return self.request.user.rol.nombre == 'Owner'
