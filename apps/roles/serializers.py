@@ -13,6 +13,10 @@ class PermisoSerializer(serializers.ModelSerializer):
 
 class RolSerializer(serializers.ModelSerializer):
     permisos = PermisoSerializer(many=True, read_only=True)
+    total_usuarios = serializers.SerializerMethodField()
+
+    def get_total_usuarios(self, obj):
+        return obj.usuarios.filter(activo=True).count()
 
     class Meta:
         model = Rol
