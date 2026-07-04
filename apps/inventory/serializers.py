@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Categoria, Producto, Movimiento
 from apps.notifications.models import Notificacion
-
+from drf_extra_fields.fields import Base64ImageField
 
 class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,6 +25,8 @@ class CategoriaSerializer(serializers.ModelSerializer):
 class ProductoSerializer(serializers.ModelSerializer):
     categoria    = CategoriaSerializer(read_only=True)
     categoria_id = serializers.UUIDField(write_only=True)
+    imagen = Base64ImageField(required=False, allow_null=True)
+    
 
     class Meta:
         model = Producto
