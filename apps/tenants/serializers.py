@@ -1,6 +1,6 @@
-# apps/tenants/serializers.py
 from rest_framework import serializers
 from .models import Plan, Modulo, Tenant, TenantModulo
+from apps.payments.serializers import PlanSerializer as BillingPlanSerializer
 
 class PlanSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,3 +26,18 @@ class TenantModuloSerializer(serializers.ModelSerializer):
     class Meta:
         model = TenantModulo
         fields = '__all__'
+
+
+class TenantPlanSerializer(serializers.ModelSerializer):
+    billing_plan = BillingPlanSerializer(read_only=True)
+    requiere_pago = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Plan
+        fields = (
+            'id', 'nombre', 'max_usuarios', 'max_productos', 'max_categorias',
+            'precio_mensual', 'activo', 'billing_plan', 'requiere_pago',
+        )
+
+    def get_requiere_pago(self, obj):
+        return obj.billing_plan is not None

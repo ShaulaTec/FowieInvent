@@ -11,6 +11,11 @@ class Plan(models.Model):
     precio_mensual = models.DecimalField(max_digits=10, decimal_places=2)
     activo = models.BooleanField(default=True)
 
+    billing_plan = models.OneToOneField(
+        'payments.Plan', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_plan',
+    )
+
     class Meta:
         db_table = 'plan'
 

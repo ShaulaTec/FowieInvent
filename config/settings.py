@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.roles',
     'apps.inventory',
     'apps.notifications',
+    'apps.payments',
 ]
 
 MIDDLEWARE = [
@@ -167,6 +168,12 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Para desarrollo/pruebas (Muestra los correos en la consola en lugar de enviarlos realmente)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Stripe
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
+STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
+STRIPE_RETURN_URL = config('STRIPE_RETURN_URL', default='http://localhost:4200/payments/return')
 
 # Para producción 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
