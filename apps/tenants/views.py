@@ -14,6 +14,7 @@ from apps.roles.permisos import EDITAR_MI_NEGOCIO, VER_MI_NEGOCIO
 from .models import Plan, Modulo, Tenant, TenantModulo
 from .serializers import (
     PlanSerializer,
+    TenantPlanSerializer,
     ModuloSerializer,
     TenantSerializer,
     TenantModuloSerializer,
@@ -22,7 +23,7 @@ from .serializers import (
 
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Plan.objects.filter(activo=True)
-    serializer_class = PlanSerializer
+    serializer_class = TenantPlanSerializer
     permission_classes = [permissions.AllowAny]
 
 
