@@ -6,7 +6,8 @@ from apps.payments.services import PlanService
 PLANES = [
     {
         'nombre': 'Básico', 'max_usuarios': 1, 'max_productos': 100,
-        'max_categorias': 10, 'precio_mensual': 199, 'billing': None,
+        'max_categorias': 10, 'precio_mensual': 199,
+        'billing': {'amount': 19900, 'currency': 'mxn', 'interval': 'month', 'interval_count': 1},
     },
     {
         'nombre': 'Estándar', 'max_usuarios': 3, 'max_productos': 500,
