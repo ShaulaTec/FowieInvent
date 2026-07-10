@@ -3,6 +3,7 @@ Capa de servicios para Stripe.
 Toda la lógica de comunicación con la API de Stripe vive aquí,
 manteniendo las vistas limpias y testables.
 """
+
 from datetime import datetime, timezone
 
 import stripe
@@ -16,6 +17,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 # ─────────────────────────────────────────────
 # Helpers internos
 # ─────────────────────────────────────────────
+
 
 def _get_or_create_customer(user) -> str:
     """
@@ -41,10 +43,26 @@ def _get_or_create_customer(user) -> str:
     # Crear nuevo customer en Stripe
     customer = stripe.Customer.create(
         email=user.email,
-        name=f"{user.first_name} {user.last_name}".strip() or user.email,
+        name=user.email,
         metadata={"user_id": str(user.pk)},
     )
     return customer["id"]
+
+
+def _get_period_dates(stripe_sub):
+    if "current_period_start" in stripe_sub and "current_period_end" in stripe_sub:
+        return stripe_sub["current_period_start"], stripe_sub["current_period_end"]
+
+    item = stripe_sub["items"]["data"][0]
+    return item["current_period_start"], item["current_period_end"]
+
+
+# ─────────────────────────────────────────────
+
+
+def _safe_get(stripe_obj, key, default=None):
+    """StripeObject no soporta .get() en esta versión; acceso seguro vía 'in'."""
+    return stripe_obj[key] if key in stripe_obj else default
 
 
 def _ts_to_dt(timestamp):
@@ -58,8 +76,8 @@ def _ts_to_dt(timestamp):
 # PlanService
 # ─────────────────────────────────────────────
 
-class PlanService:
 
+class PlanService:
     @staticmethod
     def sync_to_stripe(plan: Plan) -> Plan:
         """
@@ -120,10 +138,12 @@ class PlanService:
 # PaymentService  (pagos únicos)
 # ─────────────────────────────────────────────
 
-class PaymentService:
 
+class PaymentService:
     @staticmethod
-    def create_payment_intent(user, plan: Plan, payment_method_id: str = None) -> Payment:
+    def create_payment_intent(
+        user, plan: Plan, payment_method_id: str = None
+    ) -> Payment:
         """
         Crea un PaymentIntent en Stripe y guarda el registro local.
         Si se pasa payment_method_id se confirma de inmediato.
@@ -183,12 +203,11 @@ class PaymentService:
         return payment
 
 
-# ─────────────────────────────────────────────
 # SubscriptionService
 # ─────────────────────────────────────────────
 
-class SubscriptionService:
 
+class SubscriptionService:
     @staticmethod
     def create_subscription(user, plan: Plan, payment_method_id: str) -> Subscription:
         """
@@ -198,7 +217,9 @@ class SubscriptionService:
         if not plan.is_recurring:
             raise ValueError("El plan seleccionado no es recurrente.")
         if not plan.stripe_price_id:
-            raise ValueError("El plan no está sincronizado con Stripe. Sincronízalo primero.")
+            raise ValueError(
+                "El plan no está sincronizado con Stripe. Sincronízalo primero."
+            )
 
         customer_id = _get_or_create_customer(user)
 
@@ -216,21 +237,27 @@ class SubscriptionService:
             metadata={"user_id": str(user.pk), "plan_id": str(plan.pk)},
         )
 
+        period_start, period_end = _get_period_dates(stripe_sub)
+
         subscription = Subscription.objects.create(
             user=user,
             plan=plan,
             stripe_subscription_id=stripe_sub["id"],
             stripe_customer_id=customer_id,
             status=stripe_sub["status"],
-            current_period_start=_ts_to_dt(stripe_sub["current_period_start"]),
-            current_period_end=_ts_to_dt(stripe_sub["current_period_end"]),
+            current_period_start=_ts_to_dt(period_start),
+            current_period_end=_ts_to_dt(period_end),
             cancel_at_period_end=stripe_sub["cancel_at_period_end"],
-            trial_end=_ts_to_dt(stripe_sub.get("trial_end")),
+            trial_end=_ts_to_dt(
+                stripe_sub["trial_end"] if "trial_end" in stripe_sub else None
+            ),
         )
         return subscription
 
     @staticmethod
-    def cancel_subscription(subscription: Subscription, at_period_end: bool = True) -> Subscription:
+    def cancel_subscription(
+        subscription: Subscription, at_period_end: bool = True
+    ) -> Subscription:
         """
         Cancela la suscripción al final del período (por defecto)
         o de inmediato si at_period_end=False.
@@ -246,7 +273,9 @@ class SubscriptionService:
             subscription.status = Subscription.Status.CANCELED
             subscription.canceled_at = datetime.now(tz=timezone.utc)
 
-        subscription.save(update_fields=["status", "cancel_at_period_end", "canceled_at"])
+        subscription.save(
+            update_fields=["status", "cancel_at_period_end", "canceled_at"]
+        )
         return subscription
 
     @staticmethod
@@ -295,10 +324,12 @@ class SubscriptionService:
 # RefundService
 # ─────────────────────────────────────────────
 
-class RefundService:
 
+class RefundService:
     @staticmethod
-    def create_refund(payment: Payment, amount: int = None, reason: str = "requested_by_customer") -> Refund:
+    def create_refund(
+        payment: Payment, amount: int = None, reason: str = "requested_by_customer"
+    ) -> Refund:
         """
         Crea un reembolso en Stripe.
         - amount=None → reembolso total.
@@ -309,7 +340,7 @@ class RefundService:
 
         # Obtener el charge_id del payment intent
         intent = stripe.PaymentIntent.retrieve(payment.stripe_payment_intent_id)
-        latest_charge = intent.get("latest_charge")
+        latest_charge = _safe_get(intent, "latest_charge")
         if not latest_charge:
             raise ValueError("No se encontró el cargo asociado al pago.")
 
