@@ -33,10 +33,10 @@ class TenantViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
     serializer_class = TenantSerializer
     permission_classes = [permissions.IsAuthenticated]
     permiso_requerido_map = {
-        'list': VER_MI_NEGOCIO,
-        'retrieve': VER_MI_NEGOCIO,
-        'update': EDITAR_MI_NEGOCIO,
-        'partial_update': EDITAR_MI_NEGOCIO,
+        "list": VER_MI_NEGOCIO,
+        "retrieve": VER_MI_NEGOCIO,
+        "update": EDITAR_MI_NEGOCIO,
+        "partial_update": EDITAR_MI_NEGOCIO,
         # `destroy` queda fuera del mapa: la baja se hace via la accion
         # `cancelar_suscripcion`, protegida aparte con chequeo de Owner.
     }
@@ -44,7 +44,7 @@ class TenantViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         return Tenant.objects.filter(id=self.request.user.tenant.id)
 
-    @action(detail=False, methods=['post'], url_path='cancelar-suscripcion')
+    @action(detail=False, methods=["post"], url_path="cancelar-suscripcion")
     def cancelar_suscripcion(self, request):
         """
         POST /api/tenants/info/cancelar-suscripcion/
@@ -64,64 +64,73 @@ class TenantViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
         cancelacion agendada, responde 200 sin duplicar la operacion.
         """
         usuario = request.user
-        rol = getattr(usuario, 'rol', None)
+        rol = getattr(usuario, "rol", None)
 
-        if rol is None or rol.nombre != 'Owner':
+        if rol is None or rol.nombre != "Owner":
             raise PermissionDenied(
-                'Solo el propietario (Owner) del negocio puede cancelar la suscripcion.'
+                "Solo el propietario (Owner) del negocio puede cancelar la suscripcion."
             )
 
         tenant = usuario.tenant
         if tenant is None:
             return Response(
-                {'detail': 'El usuario no pertenece a ningun tenant.'},
+                {"detail": "El usuario no pertenece a ningun tenant."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        motivo = (request.data.get('motivo') or '').strip()[:200]
+        motivo = (request.data.get("motivo") or "").strip()[:200]
 
         if tenant.estado == Tenant.Estado.INACTIVO:
-            return Response({
-                'detail': 'La suscripcion ya estaba cancelada.',
-                'tenant_id': str(tenant.id),
-                'estado': tenant.estado,
-                'fecha_vencimiento': tenant.fecha_vencimiento,
-            })
+            return Response(
+                {
+                    "detail": "La suscripcion ya estaba cancelada.",
+                    "tenant_id": str(tenant.id),
+                    "estado": tenant.estado,
+                    "fecha_vencimiento": tenant.fecha_vencimiento,
+                }
+            )
 
         # ── Plan sin billing (gratuito): corte inmediato ────────────────
         if not tenant.plan.billing_plan:
             tenant.estado = Tenant.Estado.INACTIVO
-            tenant.save(update_fields=['estado'])
-            return Response({
-                'detail': 'Suscripcion cancelada correctamente.',
-                'tenant_id': str(tenant.id),
-                'estado': tenant.estado,
-                'fecha_vencimiento': tenant.fecha_vencimiento,
-                'fecha_cancelacion': timezone.localtime(),
-                'motivo': motivo or None,
-            })
+            tenant.save(update_fields=["estado"])
+            return Response(
+                {
+                    "detail": "Suscripcion cancelada correctamente.",
+                    "tenant_id": str(tenant.id),
+                    "estado": tenant.estado,
+                    "fecha_vencimiento": tenant.fecha_vencimiento,
+                    "fecha_cancelacion": timezone.localtime(),
+                    "motivo": motivo or None,
+                }
+            )
 
         # ── Plan de paga: agendar cancelacion al final del periodo ──────
         subscription = (
-            Subscription.objects
-            .filter(user__tenant=tenant, status__in=['active', 'trialing', 'past_due'])
-            .order_by('-created_at')
+            Subscription.objects.filter(
+                user__tenant=tenant, status__in=["active", "trialing", "past_due"]
+            )
+            .order_by("-created_at")
             .first()
         )
 
         if subscription is None:
             return Response(
-                {'detail': 'No se encontro una suscripcion activa en Stripe para este tenant.'},
+                {
+                    "detail": "No se encontro una suscripcion activa en Stripe para este tenant."
+                },
                 status=status.HTTP_409_CONFLICT,
             )
 
         if subscription.cancel_at_period_end:
-            return Response({
-                'detail': 'La cancelacion ya estaba agendada para el final del periodo.',
-                'tenant_id': str(tenant.id),
-                'estado': tenant.estado,
-                'acceso_hasta': subscription.current_period_end,
-            })
+            return Response(
+                {
+                    "detail": "La cancelacion ya estaba agendada para el final del periodo.",
+                    "tenant_id": str(tenant.id),
+                    "estado": tenant.estado,
+                    "acceso_hasta": subscription.current_period_end,
+                }
+            )
 
         try:
             subscription = SubscriptionService.cancel_subscription(
@@ -129,18 +138,20 @@ class TenantViewSet(PermisoRequeridoMixin, viewsets.ModelViewSet):
             )
         except Exception as exc:
             return Response(
-                {'detail': f'No se pudo agendar la cancelacion en Stripe: {exc}'},
+                {"detail": f"No se pudo agendar la cancelacion en Stripe: {exc}"},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        return Response({
-            'detail': 'Cancelacion agendada. El acceso continua hasta el final del periodo ya pagado.',
-            'tenant_id': str(tenant.id),
-            'estado': tenant.estado,  # sigue ACTIVO a proposito
-            'acceso_hasta': subscription.current_period_end,
-            'fecha_solicitud': timezone.localtime(),
-            'motivo': motivo or None,
-        })
+        return Response(
+            {
+                "detail": "Cancelacion agendada. El acceso continua hasta el final del periodo ya pagado.",
+                "tenant_id": str(tenant.id),
+                "estado": tenant.estado,  # sigue ACTIVO a proposito
+                "acceso_hasta": subscription.current_period_end,
+                "fecha_solicitud": timezone.localtime(),
+                "motivo": motivo or None,
+            }
+        )
 
 
 class TenantModuloViewSet(viewsets.ReadOnlyModelViewSet):
@@ -148,7 +159,4 @@ class TenantModuloViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return TenantModulo.objects.filter(
-            tenant=self.request.user.tenant,
-            activo=True
-        )
+        return TenantModulo.objects.filter(tenant=self.request.user.tenant, activo=True)
