@@ -137,9 +137,11 @@ def _handle_subscription_updated(stripe_sub):
 
 
 def _handle_subscription_deleted(stripe_sub):
-    """Marca la Subscription como cancelada."""
+    """Marca la Subscription como cancelada y corta el acceso del tenant."""
     try:
-        sub = Subscription.objects.get(stripe_subscription_id=stripe_sub["id"])
+        sub = Subscription.objects.select_related("user__tenant").get(
+            stripe_subscription_id=stripe_sub["id"]
+        )
     except Subscription.DoesNotExist:
         logger.warning("Subscription %s no encontrada localmente.", stripe_sub["id"])
         return
@@ -149,6 +151,19 @@ def _handle_subscription_deleted(stripe_sub):
     sub.save(update_fields=["status", "canceled_at"])
     logger.info("Subscription %s cancelada por evento de Stripe.", sub.pk)
 
+    # El periodo ya pagado terminó de verdad — ahora sí cortamos el acceso.
+    tenant = getattr(sub.user, "tenant", None)
+    if tenant is None:
+        logger.warning(
+            "Subscription %s no tiene tenant asociado; no se actualizó el acceso.", sub.pk
+        )
+        return
+
+    from apps.tenants.models import Tenant  # import diferido: evita import circular payments <-> tenants
+
+    tenant.estado = Tenant.Estado.INACTIVO
+    tenant.save(update_fields=["estado"])
+    logger.info("Tenant %s marcado como INACTIVO (fin de periodo pagado).", tenant.pk)
 
 def _handle_invoice_paid(invoice):
     """

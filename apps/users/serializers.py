@@ -1,19 +1,21 @@
+import stripe
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
+
 from .models import Usuario
 from apps.roles.models import Rol
 from apps.roles.serializers import RolSerializer
-from apps.tenants.models import Tenant, Plan
-
+from apps.tenants.models import Tenant, Plan, Modulo, TenantModulo
+from apps.payments.services import SubscriptionService
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = 'email'
 
     def validate(self, attrs):
-        email    = attrs.get('email')
+        email = attrs.get('email')
         password = attrs.get('password')
 
         try:
@@ -29,24 +31,24 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         refresh = self.get_token(user)
         return {
-            'access':  str(refresh.access_token),
+            'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': {
-                'id':     str(user.id),
-                'email':  user.email,
+                'id': str(user.id),
+                'email': user.email,
                 'tenant': str(user.tenant.id),
-                'rol':    user.rol.nombre,
+                'rol': user.rol.nombre,
             }
         }
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    rol      = RolSerializer(read_only=True)
-    rol_id   = serializers.UUIDField(write_only=True)
+    rol = RolSerializer(read_only=True)
+    rol_id = serializers.UUIDField(write_only=True)
     password = serializers.CharField(write_only=True)
 
     class Meta:
-        model  = Usuario
+        model = Usuario
         fields = ('id', 'email', 'rol', 'rol_id', 'activo', 'ultimo_acceso', 'password')
         read_only_fields = ('tenant',)
 
@@ -55,7 +57,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         tenant = request.user.tenant
         plan = tenant.plan
 
-        if not self.instance:  # Solo en creación
+        if not self.instance:
             if tenant.usuarios.count() >= plan.max_usuarios:
                 raise serializers.ValidationError(
                     {"detail": f"Tu plan solo permite {plan.max_usuarios} usuarios."}
@@ -71,30 +73,42 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.Serializer):
-    nombre         = serializers.CharField(max_length=150)
-    apellido       = serializers.CharField(max_length=150)
-    email          = serializers.EmailField()
-    password       = serializers.CharField(write_only=True, min_length=8)
-    nombre_negocio = serializers.CharField(max_length=200)
-    plan_id        = serializers.UUIDField(required=False, allow_null=True)
+    nombre            = serializers.CharField(max_length=150)
+    apellido          = serializers.CharField(max_length=150)
+    email             = serializers.EmailField()
+    password          = serializers.CharField(write_only=True, min_length=8)
+    nombre_negocio    = serializers.CharField(max_length=200)
+    plan_id           = serializers.UUIDField(required=False, allow_null=True)
+    payment_method_id = serializers.CharField(required=False, allow_blank=True)
 
     def validate_email(self, value):
         if Usuario.objects.filter(email=value).exists():
             raise serializers.ValidationError('Ya existe una cuenta con este correo.')
         return value
 
-    @transaction.atomic
-    def create(self, validated_data):
-        plan_id = validated_data.get('plan_id')
+    def validate(self, attrs):
+        plan_id = attrs.get('plan_id')
         if plan_id:
-            try:
-                plan = Plan.objects.get(id=plan_id, activo=True)
-            except Plan.DoesNotExist:
-                raise serializers.ValidationError('Plan no encontrado.')
+            plan = Plan.objects.filter(id=plan_id, activo=True).first()
+            if not plan:
+                raise serializers.ValidationError({'plan_id': 'Plan no encontrado.'})
         else:
             plan = Plan.objects.filter(activo=True).first()
             if not plan:
                 raise serializers.ValidationError('No hay planes disponibles.')
+
+        if plan.billing_plan and not attrs.get('payment_method_id'):
+            raise serializers.ValidationError(
+                {'payment_method_id': 'Este plan requiere un método de pago.'}
+            )
+
+        attrs['plan'] = plan
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        plan = validated_data['plan']
+        payment_method_id = validated_data.get('payment_method_id')
 
         tenant = Tenant.objects.create(
             nombre_negocio=validated_data['nombre_negocio'],
@@ -117,16 +131,28 @@ class RegisterSerializer(serializers.Serializer):
         user.set_password(validated_data['password'])
         user.save()
 
-        # ── Asignar módulos activos al tenant recién creado ───────────────
-
-        from apps.tenants.models import Modulo, TenantModulo
-
         # Plan básico (1 usuario) no incluye el módulo de roles y usuarios
         excluidos = {'rbac'} if plan.max_usuarios == 1 else set()
         modulos = Modulo.objects.filter(activo=True).exclude(codigo__in=excluidos)
-
         TenantModulo.objects.bulk_create([
             TenantModulo(tenant=tenant, modulo=modulo)
             for modulo in modulos
         ])
+
+        if plan.billing_plan:
+            try:
+                subscription = SubscriptionService.create_subscription(
+                    user=user,
+                    plan=plan.billing_plan,
+                    payment_method_id=payment_method_id,
+                )
+            except stripe.error.StripeError as exc:
+                # El @transaction.atomic revierte tenant, usuario, rol y módulos
+                raise serializers.ValidationError(
+                    {'payment_method_id': getattr(exc, 'user_message', None) or str(exc)}
+                )
+
+            tenant.fecha_vencimiento = subscription.current_period_end.date()
+            tenant.save(update_fields=['fecha_vencimiento'])
+
         return user
